@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guess the Pokémon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#ffcb05;
+  --accent2:#3b4cca;
+  --bg1:#ff4e50; --bg2:#fc913a; --bg3:#667eea; --bg4:#764ba2;
+  --glass: rgba(255,255,255,0.14);
+  --glass-strong: rgba(255,255,255,0.28);
+  --ink:#fff;
+  --radius:18px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Nunito', system-ui, sans-serif;
+  color:var(--ink);
+  min-height:100vh; min-height:100dvh;
+  overflow-x:hidden;
+  background: linear-gradient(-45deg, var(--bg1), var(--bg2), var(--bg3), var(--bg4));
+  background-size:400% 400%;
+  animation: gradientBG 14s ease infinite;
+  position:relative;
+  transition: background 0.6s ease;
+}
+@keyframes gradientBG{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
+h1,h2,h3{font-family:'Baloo 2', 'Nunito', sans-serif; margin:0;}
+
+/* focus visibility */
+a:focus-visible, button:focus-visible, input:focus-visible, .card:focus-visible{
+  outline: 3px solid #fff; outline-offset:2px;
+}
+
+/* floating pokeballs layer */
+#pokeballs{position:fixed; inset:0; overflow:hidden; z-index:0; pointer-events:none;}
+.pokeball{
+  position:absolute; width:56px; opacity:0.13; top:110%;
+  animation-name: floatUp; animation-timing-function:linear; animation-iteration-count:infinite;
+  filter:drop-shadow(0 0 6px rgba(0,0,0,0.2));
+}
+@keyframes floatUp{0%{transform:translateY(0) rotate(0deg);}100%{transform:translateY(-140vh) rotate(360deg);}}
+
+#app{position:relative; z-index:1; min-height:100dvh; display:flex; flex-direction:column; align-items:center;}
+.view{width:100%; max-width:820px; padding:28px 18px 60px; margin:0 auto; animation:viewIn 0.45s ease both;}
+@keyframes viewIn{from{opacity:0; transform:translateY(14px);}to{opacity:1; transform:translateY(0);}}
+.view.leaving{animation:viewOut 0.25s ease both;}
+@keyframes viewOut{to{opacity:0; transform:translateY(-10px);}}
+
+/* ---------- HOME ---------- */
+.home-hero{text-align:center; margin-bottom:6px;}
+.home-hero img{width:230px; max-width:70vw; filter:drop-shadow(0 8px 16px rgba(0,0,0,0.35));}
+.home-title{font-size:clamp(28px,6vw,44px); font-weight:800; text-shadow:0 4px 12px rgba(0,0,0,0.4); margin:6px 0 4px;}
+.home-sub{opacity:0.92; font-weight:600; margin-bottom:28px; font-size:15px;}
+
+.cat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px;}
+.cat-card{
+  position:relative; display:flex; align-items:center; gap:14px; text-align:left;
+  padding:16px 18px; border-radius:var(--radius); text-decoration:none; color:var(--ink);
+  background:var(--glass); border:1px solid rgba(255,255,255,0.32); backdrop-filter:blur(12px);
+  cursor:pointer; overflow:hidden; transition:transform .25s ease, background .25s ease, box-shadow .25s ease;
+  border-top:4px solid var(--cat-accent, #fff);
+}
+.cat-card:hover, .cat-card:focus-visible{transform:translateY(-5px) scale(1.02); background:var(--glass-strong); box-shadow:0 14px 26px rgba(0,0,0,0.28);}
+.cat-card img{width:52px; height:52px; object-fit:contain; flex-shrink:0; filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));}
+.cat-card .cat-info{flex:1; min-width:0;}
+.cat-card .cat-name{font-weight:800; font-size:17px; line-height:1.15;}
+.cat-card .cat-meta{font-size:12.5px; opacity:0.85; margin-top:3px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+.cat-card .cat-count{background:rgba(0,0,0,0.22); padding:2px 8px; border-radius:20px; font-weight:700;}
+
+.home-socials{
+  display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;
+  margin:30px auto 0;
+}
+.home-socials a{
+  display:flex; align-items:center; justify-content:center; width:48px; height:48px;
+  border-radius:50%; text-decoration:none;
+  background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); backdrop-filter:blur(10px);
+  transition:.3s ease;
+}
+.home-socials a:hover{transform:translateY(-4px) scale(1.08); background:rgba(255,255,255,0.3);}
+.home-socials img{width:22px; height:22px;}
+
+/* ---------- BOARD ---------- */
+.board-top{display:flex; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap;}
+.back-btn{
+  display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.3);
+  color:#fff; font-weight:700; text-decoration:none; padding:9px 14px; border-radius:12px; cursor:pointer;
+  font-size:14px; backdrop-filter:blur(8px); transition:.2s ease;
+}
+.back-btn:hover{background:rgba(255,255,255,0.32); transform:translateY(-2px);}
+.board-title{font-size:clamp(22px,5vw,30px); font-weight:800; text-shadow:0 3px 10px rgba(0,0,0,0.35); flex:1; min-width:180px;}
+
+.board-layout{display:flex; flex-direction:column; align-items:center; gap:16px;}
+
+.secret{
+  background:rgba(255,255,255,0.95); color:#222; border-radius:22px; padding:18px;
+  box-shadow:0 14px 30px rgba(0,0,0,0.3); text-align:center; width:100%; max-width:280px;
+  cursor:pointer; position:relative; min-height:200px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; transition:transform .4s ease, opacity .4s ease;
+}
+.secret img{width:150px; height:150px; object-fit:contain;}
+.secret.hidden img,.secret.hidden h2{display:none;}
+.secret.hidden::after{
+  content:"Tap to peek 👀"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(160deg,#2b2f77,#111); color:#fff; border-radius:22px; font-size:16px; font-weight:800; letter-spacing:.5px; text-align:center; padding:0 16px;
+}
+.secret.showing{animation:revealEffect .55s ease forwards;}
+.secret.hiding{animation:hideEffect .5s ease forwards;}
+@keyframes revealEffect{0%{transform:scale(.8) rotateY(90deg); opacity:0;}100%{transform:scale(1) rotateY(0deg); opacity:1;}}
+@keyframes hideEffect{0%{transform:scale(1) rotateY(0deg); opacity:1;}100%{transform:scale(.8) rotateY(90deg); opacity:0;}}
+.secret.showing img{animation:popOut .55s ease forwards;}
+@keyframes popOut{0%{transform:scale(.3); opacity:0;}55%{transform:scale(1.18); opacity:1;}100%{transform:scale(1); opacity:1;}}
+.secret h2{margin-top:8px; font-size:20px; font-weight:800;}
+
+.pokeball-reveal{position:absolute; width:110px; z-index:10; top:50%; left:50%; transform:translate(-50%,-50%) scale(0); animation:ballOpen .75s ease forwards; pointer-events:none;}
+@keyframes ballOpen{0%{transform:translate(-50%,-50%) scale(0) rotate(0);opacity:0;}40%{transform:translate(-50%,-50%) scale(1.2) rotate(180deg);opacity:1;}70%{transform:translate(-50%,-50%) scale(1) rotate(360deg);}100%{transform:translate(-50%,-50%) scale(0);opacity:0;}}
+.flash{position:absolute; width:200px; height:200px; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 70%); top:50%; left:50%; transform:translate(-50%,-50%) scale(0); z-index:9; animation:flashAnim .6s ease forwards; pointer-events:none;}
+@keyframes flashAnim{0%{transform:translate(-50%,-50%) scale(0);opacity:1;}50%{transform:translate(-50%,-50%) scale(1.5);opacity:1;}100%{transform:translate(-50%,-50%) scale(2);opacity:0;}}
+
+.controls-row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+.btn{
+  padding:11px 20px; font-size:14px; font-weight:800; border:none; border-radius:14px; cursor:pointer;
+  background:var(--accent); color:#20241f; box-shadow:0 6px 14px rgba(0,0,0,0.25); transition:.2s ease;
+}
+.btn:hover{transform:translateY(-3px) scale(1.03);}
+.btn.secondary{background:rgba(255,255,255,0.2); color:#fff; border:1px solid rgba(255,255,255,0.35);}
+.btn:active{transform:scale(.96);}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:10px; width:100%; margin-top:6px;}
+.card{
+  background:rgba(255,255,255,0.94); color:#222; border-radius:14px; padding:8px 6px; text-align:center;
+  box-shadow:0 4px 10px rgba(0,0,0,0.2); cursor:pointer; position:relative; transition:transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+}
+.card img{width:64px; height:64px; object-fit:contain;}
+.card .cname{font-size:11px; font-weight:700; margin-top:2px; line-height:1.2; word-break:break-word;}
+.card:hover{transform:translateY(-5px) scale(1.05); box-shadow:0 0 14px rgba(255,255,255,0.6), 0 0 22px var(--cat-accent,#ffcb05);}
+.card.removed{opacity:0.32;}
+.card.removed::after{content:"✖"; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:30px; color:#e63946; font-weight:900;}
+
+
+footer.credit{margin-top:34px; font-size:12px; opacity:0.75; text-align:center; font-weight:600;}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.001s !important; animation-iteration-count:1 !important; transition-duration:0.001s !important;}
+}
+
+/* ===== Floating music player (Safari Ball launcher) ===== */
+.music-launcher{
+  position:fixed;
+  right:max(20px, env(safe-area-inset-right));
+  top:50%;
+  margin-top:-29px; /* half of height, keeps it vertically centered on the right edge so it never runs off-screen */
+  width:58px;
+  height:58px;
+  border-radius:50%;
+  border:none;
+  background:transparent;
+  color:#fff;
+  font-size:25px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  z-index:1000;
+  box-shadow:none;
+  transition:.25s ease;
+  padding:0;
+}
+.music-launcher:hover{transform:scale(1.1)}
+.music-launcher.active{transform:rotate(25deg) scale(1.05)}
+.music-launcher-icon{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  pointer-events:none;
+  filter:drop-shadow(0 3px 8px rgba(0,0,0,.5));
+}
+.music-options{
+  position:fixed;
+  right:max(20px, env(safe-area-inset-right));
+  top:50%;
+  margin-top:-29px;
+  width:58px;
+  height:58px;
+  z-index:999;
+  pointer-events:none;
+}
+.music-option{
+  position:absolute;
+  right:0;
+  bottom:0;
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.3);
+  background:rgba(0,0,0,.28);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  color:#fff;
+  cursor:pointer;
+  opacity:0;
+  transform:translate(0,0) scale(.4);
+  transition:opacity .2s ease,transform .28s cubic-bezier(.2,.8,.2,1),background .2s ease;
+  pointer-events:none;
+  box-shadow:0 5px 16px rgba(0,0,0,.2);
+}
+.music-options.open{pointer-events:auto}
+.music-options.open .music-option{
+  opacity:.88;
+  pointer-events:auto;
+}
+.music-options.open .music-option:nth-child(1){transform:translateY(-78px) scale(1)}
+.music-options.open .music-option:nth-child(2){transform:translate(-62px,-48px) scale(1)}
+.music-options.open .music-option:nth-child(3){transform:translate(-76px,0) scale(1)}
+.music-options.open .music-option:nth-child(4){transform:translate(-62px,48px) scale(1)}
+.music-options.open .music-option:nth-child(5){transform:translateY(78px) scale(1)}
+.music-option:hover,.music-option.active{
+  opacity:1;
+  background:rgba(255,255,255,.2);
+}
+.music-icon{font-size:22px;line-height:1}
+.music-icon-img{width:26px;height:26px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.45));display:block;margin:0 auto}
+.music-label{font-size:9px;font-weight:700;margin-top:2px;display:block}
+.music-tooltip{
+  position:fixed;
+  right:88px;
+  bottom:28px;
+  z-index:998;
+  padding:7px 10px;
+  border-radius:10px;
+  color:#fff;
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);
+  font-size:12px;
+  opacity:0;
+  transform:translateX(8px);
+  transition:.2s;
+  pointer-events:none;
+  white-space:nowrap;
+}
+.music-tooltip.show{opacity:1;transform:translateX(0)}
+@media (max-width: 480px) {
+  .music-launcher, .music-options{
+    right: max(10px, env(safe-area-inset-right));
+    margin-top: -25px;
+    width: 50px;
+    height: 50px;
+  }
+  .music-option{
+    width: 44px;
+    height: 44px;
+  }
+}
+</style>
+</head>
+<body>
+<!-- ===== Floating music player ===== -->
+<button class="music-launcher" id="launcher" aria-label="Open music controls">
+  <img class="music-launcher-icon" id="launcherIcon" src="https://i.ibb.co/N2q88cXC/Meloetta-Aria.webp" alt="Music menu">
+</button>
+<div class="music-options" id="options" aria-label="Music controls">
+  <button class="music-option" data-volume="0.10" title="Zygarde 10% volume">
+    <img class="music-icon-img" src="https://i.ibb.co/FLCL0JmS/Untitled21-20260917123231.png" alt="Zygarde"><span class="music-label">10%</span>
+  </button>
+  <button class="music-option" data-volume="0.25" title="Zygarde 25% volume">
+    <img class="music-icon-img" src="https://i.ibb.co/wNb3C0pH/Untitled20-20260917123200.png" alt="Zygarde"><span class="music-label">25%</span>
+  </button>
+  <button class="music-option active" data-volume="0.50" title="Zygarde 50% volume">
+    <img class="music-icon-img" src="https://i.ibb.co/d0jt1SL7/IMG-20260917-122927.png" alt="Zygarde"><span class="music-label">50%</span>
+  </button>
+  <button class="music-option" data-volume="1.00" title="Zygarde 100% volume">
+    <img class="music-icon-img" src="https://i.ibb.co/C3n8D6Yq/IMG-20260917-122951.png" alt="Zygarde"><span class="music-label">100%</span>
+  </button>
+  <button class="music-option" data-volume="0.00" title="Zygarde 0% volume (mute)">
+    <img class="music-icon-img" src="https://i.ibb.co/LXxspdNy/Untitled22-20260917124355.png" alt="Zygarde"><span class="music-label">0%</span>
+  </button>
+</div>
+<div class="music-tooltip" id="tooltip"></div>
+<audio id="music" preload="auto" loop></audio>
+
+<div id="pokeballs"></div>
+<div id="app"></div>
+
+<script id="category-data" type="application/json">[{"id": "page1", "label": "Starter", "icon": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png", "items": [["Venusaur", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/3.png"], ["Charizard", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/6.png"], ["Blastoise", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/9.png"], ["Meganium", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/154.png"], ["Typhlosion", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/157.png"], ["Feraligatr", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/160.png"], ["Sceptile", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/254.png"], ["Blaziken", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/257.png"], ["Swampert", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/260.png"], ["Torterra", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/389.png"], ["Infernape", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/392.png"], ["Empoleon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/395.png"], ["Serperior", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/497.png"], ["Emboar", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/500.png"], ["Samurott", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/503.png"], ["Chesnaught", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/652.png"], ["Delphox", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/655.png"], ["Greninja", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/658.png"], ["Decidueye", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/724.png"], ["Incineroar", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/727.png"], ["Primarina", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/730.png"], ["Rillaboom", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/812.png"], ["Cinderace", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/815.png"], ["Inteleon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/818.png"], ["Meowscarada", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/908.png"], ["Skeledirge", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/911.png"], ["Quaquaval", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/914.png"]]}, {"id": "page2", "label": "Legendary/Mythical", "icon": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png", "items": [["Mewtwo", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/150.png"], ["Ho-Oh", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/250.png"], ["Lugia", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/249.png"], ["Primal Kyogre", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10077.png"], ["Primal Groudon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10078.png"], ["Mega Rayquaza", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10079.png"], ["Dialga", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/483.png"], ["Palkia", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/484.png"], ["Giratina", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/487.png"], ["Zekrom", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/644.png"], ["Reshiram", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/643.png"], ["Kyurem", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/646.png"], ["Xerneas", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/716.png"], ["Yveltal", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/717.png"], ["Zygarde 100%", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10120.png"], ["Solgaleo", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/791.png"], ["Lunala", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/792.png"], ["Crowned Zacian", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10188.png"], ["Crowned Zamazenta", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10189.png"], ["Eternamax Eternatus", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10190.png"], ["Koraidon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1007.png"], ["Miraidon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1008.png"], ["Ogerpon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1017.png"], ["Darkrai", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/491.png"], ["Hoopa Unbound", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10086.png"], ["Zarude", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10192.png"], ["Arceus", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/493.png"]]}, {"id": "page3", "label": "Mega", "icon": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10034.png", "items": [["Mega Venusaur", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10033.png"], ["Mega Charizard X", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10034.png"], ["Mega Charizard Y", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10035.png"], ["Mega Blastoise", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10036.png"], ["Mega Gengar", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10038.png"], ["Mega Kangaskhan", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10039.png"], ["Mega Pinsir", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10040.png"], ["Mega Gyarados", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10041.png"], ["Mega Mewtwo X", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10043.png"], ["Mega Mewtwo Y", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10044.png"], ["Mega Ampharos", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10045.png"], ["Mega Scizor", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10046.png"], ["Mega Heracross", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10047.png"], ["Mega Houndoom", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10048.png"], ["Mega Tyranitar", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10049.png"], ["Mega Blaziken", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10050.png"], ["Mega Gardevoir", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10051.png"], ["Mega Mawile", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10052.png"], ["Mega Aggron", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10053.png"], ["Mega Medicham", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10054.png"], ["Mega Manectric", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10055.png"], ["Mega Banette", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10056.png"], ["Mega Absol", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10057.png"], ["Mega Garchomp", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10058.png"], ["Mega Lucario", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10059.png"], ["Mega Diancie", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10075.png"], ["Mega Rayquaza", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10079.png"]]}, {"id": "page4", "label": "Gigantamax", "icon": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10199.png", "items": [["G-max Charizard", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10196.png"], ["G-max Venusaur", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10195.png"], ["G-max Blastoise", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10197.png"], ["G-max Butterfree", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10198.png"], ["G-max Pikachu", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10199.png"], ["G-max Meowth", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10200.png"], ["G-max Machamp", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10201.png"], ["G-max Gengar", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10202.png"], ["G-max Lapras", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10204.png"], ["G-max Eevee", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10205.png"], ["G-max Snorlax", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10206.png"], ["G-max Melmetal", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10208.png"], ["G-max Rillaboom", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10209.png"], ["G-max Cinderace", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10210.png"], ["G-max Inteleon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10211.png"], ["G-max Corviknight", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10212.png"], ["G-max Orbeetle", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10213.png"], ["Drednaw", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10214.png"], ["G-max Coalossal", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10215.png"], ["G-max Flapple/Appletun", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10217.png"], ["G-max Sandaconda", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10218.png"], ["G-max Toxtricity", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10219.png"], ["G-max Centiskorch", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10220.png"], ["G-max Hatterene", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10221.png"], ["G-max Grimmsnarl", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10222.png"], ["G-max Alcremie", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10223.png"], ["G-max Copperajah", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10224.png"], ["G-max Duraludon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10225.png"], ["G-max Urshifu Single Strike", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10226.png"], ["G-max Urshifu Rapid Style", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10227.png"]]}, {"id": "page5", "label": "Paradox/UB", "icon": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/794.png", "items": [["Nihilego", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/793.png"], ["Buzzwole", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/794.png"], ["Pheromosa", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/795.png"], ["Xurkitree", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/796.png"], ["Celesteela", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/797.png"], ["Kartana", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/798.png"], ["Guzzlord", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/799.png"], ["Naganadel", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/804.png"], ["Stakataka", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/805.png"], ["Blacephalon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/806.png"], ["Great Tusk", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/984.png"], ["Scream Tail", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/985.png"], ["Brute Bonnet", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/986.png"], ["Flutter Mane", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/987.png"], ["Slither Wing", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/988.png"], ["Sandy Shocks", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/989.png"], ["Roaring Moon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1005.png"], ["Iron Treads", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/990.png"], ["Iron Bundle", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/991.png"], ["Iron Hands", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/992.png"], ["Iron Jugulis", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/993.png"], ["Iron Moth", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/994.png"], ["Iron Thorns", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/995.png"], ["Iron Valiant", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1006.png"], ["Walking Wake", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1009.png"], ["Iron Leaves", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1010.png"], ["Gouging Fire", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1020.png"], ["Raging Bolt", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1021.png"], ["Iron Boulder", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1022.png"], ["Iron Crown", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/1023.png"]]}, {"id": "page6", "label": "Companions/Rivals", "icon": "https://i.ibb.co.com/nMCDcZLs/600px-Sun-Moon-Lana.png", "items": [["Misty", "https://i.ibb.co.com/39bft5vB/300px-Misty-Journeys.png"], ["Brock", "https://i.ibb.co.com/xtj8Dxrb/Brock-Journeys.png"], ["Gary Oak", "https://i.ibb.co.com/tMhcwpFg/Gary-Oak-anime-Journeys.webp"], ["Tracey", "https://i.ibb.co.com/9kN0nXBw/Tracey-Sketchit.png"], ["May", "https://i.ibb.co.com/wZjtbHWf/May-AG.png"], ["Max", "https://i.ibb.co.com/d4058wdp/Max-AG.png"], ["Dawn", "https://i.ibb.co.com/vCcLm42v/Dawn-JN.png"], ["Paul", "https://i.ibb.co.com/dJzfsRhy/Paul-DP-1.png"], ["Iris", "https://i.ibb.co.com/x85jC12c/Black-2-White-2-Iris.png"], ["Cilan", "https://i.ibb.co.com/QFvZ8MkL/300px-Black-White-Cilan.png"], ["N", "https://i.ibb.co.com/Tqmqhr6p/400px-Black-2-White-2-N.png"], ["Serena", "https://i.ibb.co.com/qYskkvD9/400px-XY-Serena.png"], ["Clemont", "https://i.ibb.co.com/YTdy1V1s/460px-XY-Clemont.png"], ["Bonnie", "https://i.ibb.co.com/tw7978jz/Bonnie-XY-1.png"], ["Lillie", "https://i.ibb.co.com/B2wGK7tW/Lillie-SM.png"], ["Mallow", "https://i.ibb.co.com/mCyBK1gH/350px-Mallow-SM.png"], ["Lana", "https://i.ibb.co.com/nMCDcZLs/600px-Sun-Moon-Lana.png"], ["Kiawe", "https://i.ibb.co.com/3y6wJ1G4/600px-Sun-Moon-Kiawe.png"], ["Sophocles", "https://i.ibb.co.com/cdcCKZD/350px-Sophocles-SM.png"], ["Alain", "https://i.ibb.co.com/n8KNHXLK/440px-Alain-JN.png"], ["Gladion", "https://i.ibb.co.com/cXZDPVfJ/Gladion-SM.png"], ["Goh", "https://i.ibb.co.com/Txkxsbbv/300px-Goh-JN.png"], ["Chloe", "https://i.ibb.co.com/Kj4XpDvn/300px-Chloe-JN.png"], ["Leon", "https://i.ibb.co.com/4gjpF1H8/500px-Leon-anime-JN.png"]]}, {"id": "page7", "label": "Champions/Villains", "icon": "https://i.ibb.co.com/zhBF4Phn/440px-Lets-Go-Pikachu-Eevee-Giovanni.png", "items": [["Giovanni", "https://i.ibb.co.com/zhBF4Phn/440px-Lets-Go-Pikachu-Eevee-Giovanni.png"], ["Archer", "https://i.ibb.co.com/MD716khL/400px-Heart-Gold-Soul-Silver-Archer.png"], ["Lance", "https://i.ibb.co.com/hJzKDmqv/318px-Heart-Gold-Soul-Silver-Lance.png"], ["Maxie", "https://i.ibb.co.com/HDLsPN5D/230px-Omega-Ruby-Alpha-Sapphire-Maxie.png"], ["Archie", "https://i.ibb.co.com/bMwMCJxr/360px-Omega-Ruby-Alpha-Sapphire-Archie.png"], ["Wallace", "https://i.ibb.co.com/Fk1zLTm1/460px-Omega-Ruby-Alpha-Sapphire-Wallace.png"], ["Steven", "https://i.ibb.co.com/TxmZhCmy/400px-Omega-Ruby-Alpha-Sapphire-Steven.png"], ["Cyrus", "https://i.ibb.co.com/ZzhCNQdP/238px-Diamond-Pearl-Cyrus.png"], ["Cynthia", "https://i.ibb.co.com/svGMY0Nm/300px-Diamond-Pearl-Cynthia.png"], ["Volo", "https://i.ibb.co.com/gLwWLN3j/300px-Legends-Arceus-Volo.png"], ["Ghetsis", "https://i.ibb.co.com/rGKFV5ws/300px-Black-White-Ghetsis.png"], ["Colress", "https://i.ibb.co.com/8LFdG722/332px-Black-2-White-2-Colress.png"], ["Alder", "https://i.ibb.co.com/xqGswwJT/370px-Black-White-Alder.png"], ["Iris", "https://i.ibb.co.com/rG8LqkY0/Black-2-White-2-Iris.png"], ["Lysandre", "https://i.ibb.co.com/G4NWJnjs/210px-XY-Lysandre.png"], ["Diantha", "https://i.ibb.co.com/WLTvdj5/400px-XY-Diantha.png"], ["Lusamine", "https://i.ibb.co.com/cKHnJ7TQ/300px-Sun-Moon-Lusamine.png"], ["Guzma", "https://i.ibb.co.com/WpYP8qRH/300px-Sun-Moon-Guzma.png"], ["Rose", "https://i.ibb.co.com/8nthP3PL/360px-Sword-Shield-Chairman-Rose.png"], ["Oleana", "https://i.ibb.co.com/jZg6VP4J/360px-Sword-Shield-Oleana.png"], ["Leon", "https://i.ibb.co.com/v4CTmKSk/413px-Leon-TW.png"], ["Sada", "https://i.ibb.co.com/bghh58dz/400px-Scarlet-Sada.png"], ["Turo", "https://i.ibb.co.com/yFrptHzJ/350px-Violet-Turo.png"], ["Nemona", "https://i.ibb.co.com/0yyLXBnY/292px-Nemona-HZ.png"]]}, {"id": "page8", "label": "Pseudo/Fossil", "icon": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/882.png", "items": [["Omastar", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/139.png"], ["Kabutops", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/141.png"], ["Aerodactyl", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/142.png"], ["Dragonite", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/149.png"], ["Tyranitar", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/248.png"], ["Cradily", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/346.png"], ["Armaldo", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/348.png"], ["Salamence", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/373.png"], ["Metagross", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/376.png"], ["Rampardos", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/409.png"], ["Bastiodon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/411.png"], ["Garchomp", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/445.png"], ["Carracosta", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/565.png"], ["Archeops", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/567.png"], ["Haxorus", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/612.png"], ["Hydreigon", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/635.png"], ["Tyrantrum", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/697.png"], ["Aurorus", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/699.png"], ["Goodra", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/706.png"], ["Kommo-o", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/784.png"], ["Dracozolt", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/880.png"], ["Arctozolt", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/881.png"], ["Dracovish", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/882.png"], ["Arctovish", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/883.png"], ["Dragapult", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/887.png"], ["Hisuian Goodra", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10242.png"], ["Baxcalibur", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/998.png"]]}]</script>
+<script>
+(function(){
+"use strict";
+const POKEBALL_IMG = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png";
+const CATEGORIES = JSON.parse(document.getElementById('category-data').textContent);
+const ACCENTS = {
+  page1:{a:"#3ddc84", b:"#3b4cca"},
+  page2:{a:"#a78bfa", b:"#fbbf24"},
+  page3:{a:"#ff7849", b:"#ffcb05"},
+  page4:{a:"#c026d3", b:"#6d28d9"},
+  page5:{a:"#2dd4bf", b:"#22d3ee"},
+  page6:{a:"#ff9aa2", b:"#4fc3f7"},
+  page7:{a:"#e63946", b:"#1d1b3a"},
+  page8:{a:"#c98a4b", b:"#4c7a72"},
+};
+const BG_SETS = {
+  home:["#ff4e50","#fc913a","#667eea","#764ba2"],
+};
+const MUSIC_ROLES = {
+  page1:"starter",
+  page2:"legendary",
+  page3:"mega",
+  page4:"gigantamax",
+  page5:"paradox",
+  page6:"companion",
+  page7:"villain",
+  page8:"fossil",
+};
+const app = document.getElementById('app');
+
+/* ---------- floating pokeballs ---------- */
+function initPokeballs(){
+  const layer = document.getElementById('pokeballs');
+  layer.innerHTML="";
+  const n = window.innerWidth < 600 ? 5 : 8;
+  for(let i=0;i<n;i++){
+    const img = document.createElement('img');
+    img.src = POKEBALL_IMG;
+    img.className = 'pokeball';
+    img.alt = "";
+    const left = Math.random()*94+2;
+    const dur = 14 + Math.random()*14;
+    const delay = -Math.random()*dur;
+    const size = 40 + Math.random()*40;
+    img.style.left = left+"%";
+    img.style.width = size+"px";
+    img.style.animationDuration = dur+"s";
+    img.style.animationDelay = delay+"s";
+    layer.appendChild(img);
+  }
+}
+
+/* ---------- routing ---------- */
+function parseHash(){
+  const h = location.hash.replace(/^#\/?/,'');
+  if(!h) return {view:'home'};
+  if(h.startsWith('cat/')) return {view:'board', id:h.slice(4)};
+  return {view:'home'};
+}
+
+function navigate(hash){ location.hash = hash; }
+
+function setBodyAccent(catId){
+  document.body.dataset.musicRole = (catId && MUSIC_ROLES[catId]) || "";
+  if(window.PokeMusic) window.PokeMusic.setRole(document.body.dataset.musicRole);
+  const root = document.documentElement.style;
+  if(catId && ACCENTS[catId]){
+    const c = ACCENTS[catId];
+    document.body.style.setProperty('--bg1', c.a);
+    document.body.style.setProperty('--bg2', c.b);
+    document.body.style.setProperty('--bg3', '#20214f');
+    document.body.style.setProperty('--bg4', '#0f0f28');
+    document.body.style.setProperty('--accent', c.a);
+  } else {
+    document.body.style.setProperty('--bg1', '#ff4e50');
+    document.body.style.setProperty('--bg2', '#fc913a');
+    document.body.style.setProperty('--bg3', '#667eea');
+    document.body.style.setProperty('--bg4', '#764ba2');
+    document.body.style.setProperty('--accent', '#ffcb05');
+  }
+}
+
+function render(){
+  const route = parseHash();
+  const old = app.querySelector('.view');
+  const finish = ()=>{
+    if(route.view === 'home') renderHome();
+    else if(route.view === 'board') renderBoard(route.id);
+    window.scrollTo({top:0, behavior:'instant' in window ? 'instant':'auto'});
+  };
+  if(old){
+    old.classList.add('leaving');
+    setTimeout(()=>{ app.innerHTML=''; finish(); }, 180);
+  } else {
+    finish();
+  }
+}
+
+/* ---------- HOME ---------- */
+function renderHome(){
+  setBodyAccent(null);
+  const view = document.createElement('div');
+  view.className = 'view';
+  const totalCats = CATEGORIES.length;
+
+  view.innerHTML = `
+    <div class="home-hero">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/9/98/International_Pok%C3%A9mon_logo.svg" alt="Pokémon logo">
+      <div class="home-title">Guess the Pokémon</div>
+      <div class="home-sub">Pick a category, think of one, and see if your friends can guess it 🔴⚪</div>
+    </div>
+    <div class="cat-grid" id="catGrid"></div>
+    <div class="home-socials">
+      <a href="https://www.facebook.com/profile.php?id=61585791615632" target="_blank" rel="noopener" aria-label="Facebook">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/facebook.svg" alt="Facebook">
+      </a>
+      <a href="https://www.instagram.com/aboo_samin" target="_blank" rel="noopener" aria-label="Instagram">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg" alt="Instagram">
+      </a>
+      <a href="https://x.com/aboosamin" target="_blank" rel="noopener" aria-label="X (Twitter)">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitter.svg" alt="X">
+      </a>
+      <a href="https://youtube.com/@aboomasnow" target="_blank" rel="noopener" aria-label="YouTube">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube">
+      </a>
+      <a href="https://m.twitch.tv/aboo_samin/home" target="_blank" rel="noopener" aria-label="Twitch">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitch.svg" alt="Twitch">
+      </a>
+    </div>
+    <footer class="credit">${totalCats} categories · ${CATEGORIES.reduce((s,c)=>s+c.items.length,0)} Pokémon to guess</footer>
+  `;
+  app.appendChild(view);
+
+  const grid = view.querySelector('#catGrid');
+  CATEGORIES.forEach(cat=>{
+    const accent = (ACCENTS[cat.id]||{}).a || '#ffcb05';
+    const card = document.createElement('a');
+    card.href = '#/cat/'+cat.id;
+    card.className = 'cat-card';
+    card.style.setProperty('--cat-accent', accent);
+    card.innerHTML = `
+      <img src="${cat.icon}" alt="">
+      <div class="cat-info">
+        <div class="cat-name">${cat.label}</div>
+        <div class="cat-meta">
+          <span class="cat-count">${cat.items.length} Pokémon</span>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+/* ---------- BOARD ---------- */
+function renderBoard(catId){
+  const cat = CATEGORIES.find(c=>c.id===catId);
+  if(!cat){ navigate('#/'); return; }
+  setBodyAccent(catId);
+  const accent = (ACCENTS[catId]||{}).a || '#ffcb05';
+  let secret = null; // [name,url]
+  let revealed = false;
+
+  const view = document.createElement('div');
+  view.className = 'view';
+  view.innerHTML = `
+    <div class="board-top">
+      <a class="back-btn" href="#/">← Categories</a>
+      <div class="board-title">${cat.label}</div>
+    </div>
+    <div class="board-layout">
+      <div class="secret hidden" id="secretBox" tabindex="0" role="button" aria-label="Reveal secret Pokémon">
+        <img id="secretImg" src="" alt="Secret Pokémon" />
+        <h2 id="secretName"></h2>
+      </div>
+      <div class="controls-row">
+        <button class="btn" id="newRoundBtn">🔄 New Round</button>
+        <button class="btn secondary" id="resetGridBtn">↺ Reset crossed-off</button>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  `;
+  app.appendChild(view);
+  view.style.setProperty('--cat-accent', accent);
+
+  const grid = view.querySelector('#grid');
+  const secretBox = view.querySelector('#secretBox');
+  const secretImg = view.querySelector('#secretImg');
+  const secretName = view.querySelector('#secretName');
+  function buildGrid(){
+    grid.innerHTML = '';
+    cat.items.forEach(p=>{
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.tabIndex = 0;
+      card.setAttribute('role','button');
+      card.dataset.name = p[0].toLowerCase();
+      card.innerHTML = `<img src="${p[1]}" alt="" loading="lazy"><div class="cname">${p[0]}</div>`;
+      const toggle = ()=> card.classList.toggle('removed');
+      card.addEventListener('click', toggle);
+      card.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); }});
+      grid.appendChild(card);
+    });
+  }
+
+  function newRound(){
+    const idx = Math.floor(Math.random()*cat.items.length);
+    secret = cat.items[idx];
+    secretImg.src = secret[1];
+    secretName.textContent = secret[0];
+    secretBox.classList.remove('showing');
+    secretBox.classList.add('hidden');
+    revealed = false;
+    buildGrid();
+  }
+
+  function doReveal(){
+    if(secretBox.classList.contains('hidden')){
+      secretBox.classList.remove('hidden');
+      const ball = document.createElement('img');
+      ball.src = POKEBALL_IMG;
+      ball.className = 'pokeball-reveal';
+      document.body.appendChild(ball);
+      const flash = document.createElement('div');
+      flash.className = 'flash';
+      document.body.appendChild(flash);
+      setTimeout(()=>{ ball.remove(); flash.remove(); }, 800);
+      secretBox.classList.remove('showing','hiding');
+      void secretBox.offsetWidth;
+      secretBox.classList.add('showing');
+      revealed = true;
+    } else {
+      secretBox.classList.remove('showing');
+      secretBox.classList.add('hiding');
+      setTimeout(()=>{ secretBox.classList.add('hidden'); secretBox.classList.remove('hiding'); }, 480);
+    }
+  }
+
+  secretBox.addEventListener('click', doReveal);
+  secretBox.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); doReveal(); }});
+  view.querySelector('#newRoundBtn').addEventListener('click', newRound);
+  view.querySelector('#resetGridBtn').addEventListener('click', ()=>{
+    grid.querySelectorAll('.card.removed').forEach(c=>c.classList.remove('removed'));
+  });
+
+  newRound();
+}
+
+window.addEventListener('hashchange', render);
+window.addEventListener('resize', ()=>{ /* no-op, kept light */ });
+initPokeballs();
+render();
+})();
+</script>
+
+<script>
+const roleTracks = [
+  {name: "Starter", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Starter.m4a"},
+  {name: "Legendary", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Legendary.m4a"},
+  {name: "Mega", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Mega.m4a"},
+  {name: "Gigantamax", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Gigantamax.m4a"},
+  {name: "Paradox", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Paradox.m4a"},
+  {name: "Fossil", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Fossil.m4a"},
+  {name: "Villain", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Villain.m4a"},
+  {name: "Companion", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Companion.m4a"}
+];
+// Home-screen randomizer pool (region themes) - NOT the per-menu role tracks above
+const homeTracks = [
+  {name: "Home 1", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Home/1.m4a"},
+  {name: "Home 2", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Home/2.m4a"},
+  {name: "Home 3", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Home/3.m4a"},
+  {name: "Home 4", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Home/4.m4a"},
+  {name: "Home 5", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Home/5.m4a"},
+  {name: "Home 6", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Home/6.m4a"},
+  {name: "Home 7", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Home/7.m4a"},
+  {name: "Home 8", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Home/8.m4a"},
+  {name: "Home 9", src: "https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Audio/Home/9.m4a"}
+];
+const music=document.getElementById("music");
+const launcher=document.getElementById("launcher");
+const options=document.getElementById("options");
+const volumeButtons=document.querySelectorAll(".music-option[data-volume]");
+const tooltip=document.getElementById("tooltip");
+
+let current=-1;
+let open=false;
+let wasPlayingBeforeHidden=false; // tracks whether to auto-resume when the tab/window becomes visible again
+music.volume=.5;
+
+
+const musicRoleAliases = {
+  starter: "Starter",
+  legendary: "Legendary",
+  mega: "Mega",
+  gigantamax: "Gigantamax",
+  gigantamx: "Gigantamax",
+  paradox: "Paradox",
+  fossil: "Fossil",
+  villain: "Villain",
+  companion: "Companion"
+};
+
+function getMusicRole() {
+  return (
+    document.body?.dataset?.musicRole ||
+    document.documentElement?.dataset?.musicRole ||
+    document.querySelector("[data-music-role]")?.dataset?.musicRole ||
+    ""
+  ).trim().toLowerCase();
+}
+
+function chooseRandom(){
+  let n;
+  do{n=Math.floor(Math.random()*homeTracks.length)}while(homeTracks.length>1&&n===current);
+  current=n;
+  music.src=homeTracks[n].src;
+  music.load();
+}
+
+function findTrackByRole(role){
+  const roleName=musicRoleAliases[role];
+  if(!roleName)return -1;
+  return roleTracks.findIndex(t=>t.name===roleName);
+}
+
+function playRoleTrack(idx){
+  current=idx;
+  music.loop=true; // this menu's track repeats forever, no switching
+  music.src=roleTracks[idx].src;
+  music.load();
+}
+
+function playRandomizer(){
+  music.loop=false; // home screen: keep picking a new random track forever
+  chooseRandom();
+}
+
+function applyMusicForRole(role){
+  const idx=findTrackByRole(role);
+  if(idx!==-1)playRoleTrack(idx);
+  else playRandomizer();
+  setTimeout(startMusic,3000); // new track loaded - wait 3s before it starts (not a replay/resume)
+}
+
+// Exposed so a single-page app can switch tracks on navigation without a
+// full page reload, e.g. window.PokeMusic.setRole('starter') on entering
+// the Starter page, and window.PokeMusic.setRole('') on returning home.
+window.PokeMusic={
+  setRole:function(role){
+    applyMusicForRole((role||"").trim().toLowerCase());
+  }
+};
+
+function tip(message){
+  tooltip.textContent=message;
+  tooltip.classList.add("show");
+  clearTimeout(window.tipTimer);
+  window.tipTimer=setTimeout(()=>tooltip.classList.remove("show"),1400);
+}
+
+async function startMusic(){
+  try{
+    await music.play();
+  }catch(e){
+    tip("Tap the music button to start");
+  }
+}
+
+function toggleMenu(){
+  open=!open;
+  options.classList.toggle("open",open);
+  launcher.classList.toggle("active",open);
+}
+
+launcher.addEventListener("click",toggleMenu);
+
+volumeButtons.forEach(btn=>{
+  btn.addEventListener("click",async()=>{
+    music.volume=Number(btn.dataset.volume);
+    volumeButtons.forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    if(music.volume===0){
+      tip("Music muted");
+    }else{
+      await startMusic();
+      tip("Volume: "+Math.round(music.volume*100)+"%");
+    }
+  });
+});
+
+// Auto-stop the music when the tab/window is hidden or minimized (instead of
+// playing on unfocused in the background), and pick back up where it left
+// off once the page is visible again.
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){
+    wasPlayingBeforeHidden=!music.paused;
+    if(!music.paused)music.pause();
+  }else if(wasPlayingBeforeHidden){
+    wasPlayingBeforeHidden=false;
+    startMusic();
+  }
+});
+
+music.addEventListener("ended",()=>{
+  // Only reached on the home-screen randomizer (music.loop is true on
+  // every role-specific menu, so this never fires there). A new track is
+  // being loaded, so wait 3s before it starts, same as any other fresh start.
+  chooseRandom();
+  setTimeout(startMusic,3000);
+});
+
+applyMusicForRole(getMusicRole());
+</script>
+</body>
+</html>
