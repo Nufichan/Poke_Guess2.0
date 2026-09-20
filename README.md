@@ -16,3 +16,4 @@ Built with -
 •Html
 •Css
 •Javascript
+•Python
