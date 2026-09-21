@@ -276,6 +276,8 @@ footer.credit{margin-top:34px; font-size:12px; opacity:0.75; text-align:center; 
   }
 }
 </style>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d1b3a">
 </head>
 <body>
 <!-- ===== Floating music player ===== -->
@@ -740,5 +742,10 @@ music.addEventListener("ended",()=>{
 
 applyMusicForRole(getMusicRole());
 </script>
+  <script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js');
+}
+  </script>
 </body>
 </html>
