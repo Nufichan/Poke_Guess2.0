@@ -668,7 +668,7 @@ function applyMusicForRole(role){
   const idx=findTrackByRole(role);
   if(idx!==-1)playRoleTrack(idx);
   else playRandomizer();
-  setTimeout(startMusic,3000); // new track loaded - wait 3s before it starts (not a replay/resume)
+  setTimeout(startMusic,1000); // new track loaded - wait 3s before it starts (not a replay/resume)
 }
 
 // Exposed so a single-page app can switch tracks on navigation without a
@@ -735,7 +735,7 @@ music.addEventListener("ended",()=>{
   // every role-specific menu, so this never fires there). A new track is
   // being loaded, so wait 3s before it starts, same as any other fresh start.
   chooseRandom();
-  setTimeout(startMusic,3000);
+  setTimeout(startMusic,1000);
 });
 
 applyMusicForRole(getMusicRole());
