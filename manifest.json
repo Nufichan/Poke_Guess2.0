@@ -1,7 +1,7 @@
 {
   "name": "Guess the Pokémon",
   "short_name": "PokeGuess",
-  "start_url": "./indexGuess.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1d1b3a",
   "theme_color": "#1d1b3a",
