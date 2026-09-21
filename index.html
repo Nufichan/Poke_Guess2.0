@@ -286,10 +286,10 @@ footer.credit{margin-top:34px; font-size:12px; opacity:0.75; text-align:center; 
   <button class="music-option" data-volume="0.10" title="Zygarde 10% volume">
     <img class="music-icon-img" src="https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Photos/SFX/10.png" alt="Zygarde"><span class="music-label">10%</span>
   </button>
-  <button class="music-option" data-volume="0.25" title="Zygarde 25% volume">
+  <button class="music-option active" data-volume="0.25" title="Zygarde 25% volume">
     <img class="music-icon-img" src="https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Photos/SFX/25.png" alt="Zygarde"><span class="music-label">25%</span>
   </button>
-  <button class="music-option active" data-volume="0.50" title="Zygarde 50% volume">
+  <button class="music-option" data-volume="0.50" title="Zygarde 50% volume">
     <img class="music-icon-img" src="https://raw.githubusercontent.com/Nufichan/Poke_Guess2.0/main/Photos/SFX/50.png" alt="Zygarde"><span class="music-label">50%</span>
   </button>
   <button class="music-option" data-volume="1.00" title="Zygarde 100% volume">
@@ -627,7 +627,7 @@ const tooltip=document.getElementById("tooltip");
 let current=-1;
 let open=false;
 let wasPlayingBeforeHidden=false; // tracks whether to auto-resume when the tab/window becomes visible again
-music.volume=.5;
+music.volume=.25;
 
 
 function getMusicRole() {
